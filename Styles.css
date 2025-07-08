@@ -1,0 +1,64 @@
+:root {
+  --bg-color: #0e0e10;
+  --text-color: #efeff1;
+  --placeholder-bg: #18181b;
+  --countdown-bg: rgba(0, 0, 0, 0.7);
+}
+
+body {
+  margin: 0;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Inter', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#player-container {
+  position: relative;
+  height: 100%;
+  display: flex;
+}
+
+#placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--placeholder-bg);
+  z-index: 10;
+  text-align: center;
+  padding: 20px;
+  box-sizing: border-box;
+  font-size: 24px;
+  transition: opacity 0.3s;
+}
+
+#yt-player {
+  width: 100%;
+  height: 100%;
+  display: none;
+  z-index: 5;
+}
+
+#countdown {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: var(--countdown-bg);
+  color: white;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  z-index: 20;
+  display: none;
+}
