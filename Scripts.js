@@ -97,7 +97,7 @@ function playYouTubeVideo(videoId, startTime = 0, username = '', isShort = false
   placeholder.style.opacity = '0';
   
   usernameSpan.textContent = username;
-  userInfo.style.display = 'block';
+  userInfo.style.display = 'flex';
   
   setTimeout(() => {
     placeholder.style.display = 'none';

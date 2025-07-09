@@ -15,9 +15,32 @@ body {
   overflow: hidden;
 }
 
+
+#user-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(83, 252, 24, 0.5);
+  color: white;
+  padding: 10px;
+  box-sizing: border-box;
+  z-index: 25;
+  text-align: center;
+  font-size: 18px;
+  display: none;
+  /* Nuevas propiedades para mejor presentación */
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Ajustar contenedor para evitar solapamiento */
 #player-container {
   position: relative;
-  height: 100%;
+  height: calc(100% - 40px); /* Reserva espacio para user-info */
   display: flex;
 }
 
@@ -61,20 +84,5 @@ body {
   font-weight: bold;
   font-size: 18px;
   z-index: 20;
-  display: none;
-}
-
-#user-info {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: var(--user-info-bg);
-  color: white;
-  padding: 10px;
-  box-sizing: border-box;
-  z-index: 25;
-  text-align: center;
-  font-size: 18px;
   display: none;
 }
