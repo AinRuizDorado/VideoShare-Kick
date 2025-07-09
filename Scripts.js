@@ -14,7 +14,8 @@ const DEFAULT_POST_COOLDOWN = 10;
 
 document.addEventListener('widgetEvent', handleWidgetEvent);
 
-const YT_REGEX = /!videoshare\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11}))(?:\?|\&)?(?:t=(\d+))?/i;
+// Expresión regular mejorada para detectar todos los formatos de YouTube
+const YT_REGEX = /!videoshare\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11})|youtube\.com\/shorts\/([\w-]{11})).*?(?:[?&]t=(\d+))?/i;
 
 let currentTimer = null;
 let countdownInterval = null;
@@ -34,27 +35,44 @@ function handleWidgetEvent(event) {
       
       if (videoInfo && !isPlaying) {
         const username = event.detail.data.sender.username;
-        playYouTubeVideo(videoInfo.videoId, videoInfo.startTime, username);
+        playYouTubeVideo(videoInfo.videoId, videoInfo.startTime, username, videoInfo.isShort);
       }
     }
   }
 }
 
+// Extrae ID de YouTube, tiempo de inicio y tipo de video
 function extractYouTubeInfo(message) {
   const match = message.match(YT_REGEX);
   
   if (!match) return null;
   
-  const videoId = match[1] || match[2];
-  const startTime = match[3] ? parseInt(match[3]) : 0;
+  // Identificar el formato de URL
+  let videoId;
+  let isShort = false;
+  
+  // Detectar formato de Shorts
+  if (match[3]) {
+    videoId = match[3];
+    isShort = true;
+  } 
+  // Detectar formato tradicional
+  else {
+    videoId = match[1] || match[2];
+  }
+  
+  // Extraer tiempo (si existe)
+  const startTime = match[4] ? parseInt(match[4]) : 0;
   
   return {
     videoId,
-    startTime
+    startTime,
+    isShort
   };
 }
 
-function playYouTubeVideo(videoId, startTime = 0, username = '') {
+// Reproduce video de YouTube con tiempo personalizado
+function playYouTubeVideo(videoId, startTime = 0, username = '', isShort = false) {
   const player = document.getElementById('yt-player');
   const placeholder = document.getElementById('placeholder');
   const countdown = document.getElementById('countdown');
@@ -63,7 +81,17 @@ function playYouTubeVideo(videoId, startTime = 0, username = '') {
   
   stopCurrentVideo();
   
-  player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&start=${startTime}`;
+  // Construir URL dependiendo del tipo de video
+  let videoUrl;
+  if (isShort) {
+    // Formato especial para Shorts
+    videoUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0`;
+  } else {
+    // Formato tradicional para videos normales
+    videoUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&start=${startTime}`;
+  }
+  
+  player.src = videoUrl;
   player.style.display = 'block';
   countdown.style.display = 'flex';
   placeholder.style.opacity = '0';
@@ -97,7 +125,7 @@ function playYouTubeVideo(videoId, startTime = 0, username = '') {
   currentTimer = setTimeout(() => {
     stopCurrentVideo();
     
-    // Obtener cooldown desde variables de usuario o usar valor por defecto
+    // Aplicar post cooldown si está configurado
     const postCooldown = userVariables.post_cooldown?.value 
       ? parseInt(userVariables.post_cooldown.value) 
       : DEFAULT_POST_COOLDOWN;
@@ -111,6 +139,7 @@ function playYouTubeVideo(videoId, startTime = 0, username = '') {
   }, videoDuration * 1000);
 }
 
+// Detiene el video actual
 function stopCurrentVideo() {
   if (!isPlaying) return;
   
