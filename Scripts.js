@@ -14,7 +14,8 @@ const DEFAULT_POST_COOLDOWN = 10;
 
 document.addEventListener('widgetEvent', handleWidgetEvent);
 
-const YT_REGEX = /!videoshare\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11}))(?:\?|\&)?(?:t=(\d+))?/i;
+const REWARD_NAME = "VIDEOSHARE";
+const YT_REGEX = /(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11}))(?:\?|\&)?(?:t=(\d+))?/i;
 
 let currentTimer = null;
 let countdownInterval = null;
@@ -24,24 +25,24 @@ let isInCooldown = false;
 function handleWidgetEvent(event) {
   const eventName = event.detail.event_name;
   
-  if (eventName === 'chatMessageEvent') {
-    if (isInCooldown) return;
+  // Detectar eventos de recompensa
+  if (eventName === 'rewardEvent') {
+    const rewardName = event.detail.data.reward_name;
+    const rewardInput = event.detail.data.user_input || "";
     
-    const message = event.detail.data.content;
-    
-    if (message.toLowerCase().includes('!videoshare')) {
-      const videoInfo = extractYouTubeInfo(message);
+    if (rewardName === REWARD_NAME && !isInCooldown) {
+      const videoInfo = extractYouTubeInfo(rewardInput);
       
       if (videoInfo && !isPlaying) {
-        const username = event.detail.data.sender.username;
+        const username = event.detail.data.username;
         playYouTubeVideo(videoInfo.videoId, videoInfo.startTime, username);
       }
     }
   }
 }
 
-function extractYouTubeInfo(message) {
-  const match = message.match(YT_REGEX);
+function extractYouTubeInfo(input) {
+  const match = input.match(YT_REGEX);
   
   if (!match) return null;
   
