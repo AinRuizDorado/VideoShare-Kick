@@ -41,6 +41,20 @@ function handleWidgetEvent(event) {
   }
 }
 
+// Función para convertir duración ISO 8601 a segundos
+function parseISODuration(duration) {
+  let totalSeconds = 0;
+  const hoursMatch = duration.match(/(\d+)H/);
+  const minutesMatch = duration.match(/(\d+)M/);
+  const secondsMatch = duration.match(/(\d+)S/);
+  
+  if (hoursMatch) totalSeconds += parseInt(hoursMatch[1]) * 3600;
+  if (minutesMatch) totalSeconds += parseInt(minutesMatch[1]) * 60;
+  if (secondsMatch) totalSeconds += parseInt(secondsMatch[1]);
+  
+  return totalSeconds;
+}
+
 // Extrae ID de YouTube, tiempo de inicio y tipo de video
 function extractYouTubeInfo(message) {
   const match = message.match(YT_REGEX);
@@ -72,7 +86,7 @@ function extractYouTubeInfo(message) {
 }
 
 // Reproduce video de YouTube con tiempo personalizado
-function playYouTubeVideo(videoId, startTime = 0, username = '', isShort = false) {
+async function playYouTubeVideo(videoId, startTime = 0, username = '', isShort = false) {
   const player = document.getElementById('yt-player');
   const placeholder = document.getElementById('placeholder');
   const countdown = document.getElementById('countdown');
@@ -81,6 +95,33 @@ function playYouTubeVideo(videoId, startTime = 0, username = '', isShort = false
   
   stopCurrentVideo();
   
+  // Obtener API key de variables de usuario
+  const apiKey = 'YOUTUBE API KEY';
+  // Obtener duración del video desde variables de usuario o usar valor por defecto
+  let videoDuration = userVariables.video_duration?.value 
+    ? parseInt(userVariables.video_duration.value) 
+    : DEFAULT_VIDEO_DURATION;
+  
+  // Si tenemos API key, obtener duración real del video
+  if (apiKey) {
+    try {
+      const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=${apiKey}`);
+      const data = await response.json();
+      
+      if (data.items && data.items.length > 0) {
+        const isoDuration = data.items[0].contentDetails.duration;
+        const realDuration = parseISODuration(isoDuration);
+        
+        // Ajustar duración: usar el mínimo entre la duración real y la configurada
+        videoDuration = Math.min(videoDuration, realDuration - startTime);
+        
+        // Asegurar que la duración no sea negativa
+        if (videoDuration < 1) videoDuration = 1;
+      }
+    } catch (error) {
+      console.error('Error obteniendo duración del video:', error);
+    }
+  }
   // Construir URL dependiendo del tipo de video
   let videoUrl;
   if (isShort) {
@@ -105,11 +146,6 @@ function playYouTubeVideo(videoId, startTime = 0, username = '', isShort = false
   
   isPlaying = true;
   
-  // Obtener duración del video desde variables de usuario o usar valor por defecto
-  const videoDuration = userVariables.video_duration?.value 
-    ? parseInt(userVariables.video_duration.value) 
-    : DEFAULT_VIDEO_DURATION;
-    
   let secondsLeft = videoDuration;
   countdown.textContent = secondsLeft;
   
@@ -126,9 +162,7 @@ function playYouTubeVideo(videoId, startTime = 0, username = '', isShort = false
     stopCurrentVideo();
     
     // Aplicar post cooldown si está configurado
-    const postCooldown = userVariables.post_cooldown?.value 
-      ? parseInt(userVariables.post_cooldown.value) 
-      : DEFAULT_POST_COOLDOWN;
+    const postCooldown = DEFAULT_POST_COOLDOWN;
       
     if (postCooldown > 0) {
       isInCooldown = true;
@@ -162,11 +196,4 @@ function stopCurrentVideo() {
   }, 10);
   
   isPlaying = false;
-}
-
-if (globalValues.streamerInfo) {
-  document.documentElement.style.setProperty(
-    '--bg-color', 
-    userVariables.bg_color.value || '#0e0e10'
-  );
 }
