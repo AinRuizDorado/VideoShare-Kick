@@ -1,7 +1,7 @@
 :root {
   --bg-color: transparent;
   --text-color: #efeff1;
-  --placeholder-bg: #18181b;
+  --placeholder-bg: transparent;
   --countdown-bg: rgba(0, 0, 0, 0.7);
 }
 
