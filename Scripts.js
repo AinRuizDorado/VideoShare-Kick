@@ -1,40 +1,51 @@
-// JavaScript
+// =============================================
+// CONFIGURACIÓN FÁCIL PARA USUARIOS NO TÉCNICOS
+// =============================================
+
+// Duración de reproducción de videos (en segundos)
+const DEFAULT_VIDEO_DURATION = 15;
+
+// Tiempo de espera entre videos (en segundos)
+const DEFAULT_POST_COOLDOWN = 10;
+
+// =============================================
+// NO MODIFICAR EL CÓDIGO A PARTIR DE ESTE PUNTO
+// =============================================
+
 document.addEventListener('widgetEvent', handleWidgetEvent);
 
-// Nueva expresión regular mejorada
 const YT_REGEX = /!videoshare\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11}))(?:\?|\&)?(?:t=(\d+))?/i;
 
 let currentTimer = null;
 let countdownInterval = null;
 let isPlaying = false;
+let isInCooldown = false;
 
-// Handle events from KickBot
 function handleWidgetEvent(event) {
   const eventName = event.detail.event_name;
   
   if (eventName === 'chatMessageEvent') {
+    if (isInCooldown) return;
+    
     const message = event.detail.data.content;
     
-    // Verificar si el mensaje contiene el comando !videoshare
     if (message.toLowerCase().includes('!videoshare')) {
       const videoInfo = extractYouTubeInfo(message);
       
       if (videoInfo && !isPlaying) {
-        playYouTubeVideo(videoInfo.videoId, videoInfo.startTime);
+        const username = event.detail.data.sender.username;
+        playYouTubeVideo(videoInfo.videoId, videoInfo.startTime, username);
       }
     }
   }
 }
 
-// Extrae ID de YouTube y tiempo de inicio
 function extractYouTubeInfo(message) {
   const match = message.match(YT_REGEX);
   
   if (!match) return null;
   
-  // Extraer video ID (de cualquiera de los dos posibles grupos)
   const videoId = match[1] || match[2];
-  // Extraer tiempo (si existe) o usar 0 por defecto
   const startTime = match[3] ? parseInt(match[3]) : 0;
   
   return {
@@ -43,32 +54,35 @@ function extractYouTubeInfo(message) {
   };
 }
 
-// Reproduce video de YouTube con tiempo personalizado
-function playYouTubeVideo(videoId, startTime = 0) {
+function playYouTubeVideo(videoId, startTime = 0, username = '') {
   const player = document.getElementById('yt-player');
   const placeholder = document.getElementById('placeholder');
   const countdown = document.getElementById('countdown');
+  const userInfo = document.getElementById('user-info');
+  const usernameSpan = document.getElementById('username');
   
-  // Detener cualquier video actual
   stopCurrentVideo();
   
-  // Construir URL con tiempo personalizado
   player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&start=${startTime}`;
-  
-  // Mostrar reproductor
   player.style.display = 'block';
   countdown.style.display = 'flex';
   placeholder.style.opacity = '0';
   
-  // Ocultar placeholder después de la transición
+  usernameSpan.textContent = username;
+  userInfo.style.display = 'block';
+  
   setTimeout(() => {
     placeholder.style.display = 'none';
   }, 300);
   
   isPlaying = true;
   
-  // Iniciar cuenta regresiva
-  let secondsLeft = 15;
+  // Obtener duración del video desde variables de usuario o usar valor por defecto
+  const videoDuration = userVariables.video_duration?.value 
+    ? parseInt(userVariables.video_duration.value) 
+    : DEFAULT_VIDEO_DURATION;
+    
+  let secondsLeft = videoDuration;
   countdown.textContent = secondsLeft;
   
   countdownInterval = setInterval(() => {
@@ -80,28 +94,38 @@ function playYouTubeVideo(videoId, startTime = 0) {
     }
   }, 1000);
   
-  // Detener después de 15 segundos
-  currentTimer = setTimeout(stopCurrentVideo, 15000);
+  currentTimer = setTimeout(() => {
+    stopCurrentVideo();
+    
+    // Obtener cooldown desde variables de usuario o usar valor por defecto
+    const postCooldown = userVariables.post_cooldown?.value 
+      ? parseInt(userVariables.post_cooldown.value) 
+      : DEFAULT_POST_COOLDOWN;
+      
+    if (postCooldown > 0) {
+      isInCooldown = true;
+      setTimeout(() => {
+        isInCooldown = false;
+      }, postCooldown * 1000);
+    }
+  }, videoDuration * 1000);
 }
 
-// Detiene el video actual
 function stopCurrentVideo() {
   if (!isPlaying) return;
   
   const player = document.getElementById('yt-player');
   const placeholder = document.getElementById('placeholder');
   const countdown = document.getElementById('countdown');
+  const userInfo = document.getElementById('user-info');
   
-  // Limpiar temporizadores
   clearTimeout(currentTimer);
   clearInterval(countdownInterval);
   
-  // Reiniciar reproductor
   player.src = '';
   player.style.display = 'none';
-  
-  // Restaurar UI
   countdown.style.display = 'none';
+  userInfo.style.display = 'none';
   placeholder.style.display = 'flex';
   
   setTimeout(() => {
@@ -111,7 +135,6 @@ function stopCurrentVideo() {
   isPlaying = false;
 }
 
-// Inicializar con valores globales
 if (globalValues.streamerInfo) {
   document.documentElement.style.setProperty(
     '--bg-color', 
