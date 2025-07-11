@@ -3,31 +3,35 @@
   --text-color: #efeff1;
   --placeholder-bg: transparent;
   --countdown-bg: rgba(0, 0, 0, 0.7);
-  --user-info-bg: rgba(83, 252, 24, 0.5); /* Opacidad al 50% */;
+  --user-info-bg: rgba(0, 0, 0, 0.7); /* Opacidad al 50% */;
 }
 
 body {
   margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
   background: var(--bg-color);
   color: var(--text-color);
-  font-family: 'Inter', sans-serif;
-  height: 100vh;
   overflow: hidden;
 }
 
+#player-container.kick {
+  height: 200vh;
+}
 
 #user-info {
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
-  background: rgba(83, 252, 24, 0.5);
+  background: rgba(0, 0, 0, 0.7); /* Color original (83, 252, 24, 0.5) */
   color: white;
   padding: 10px;
   box-sizing: border-box;
   z-index: 25;
   text-align: center;
-  font-size: 18px;
+  font-size: 26px;
   display: none;
   /* Nuevas propiedades para mejor presentación */
   min-height: 40px;
@@ -35,6 +39,13 @@ body {
   justify-content: center;
   backdrop-filter: blur(2px);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+#platform-logo {
+    width: 32px;
+    height: 32px;
+    margin-right: 8px;
+    display: inline-block;
 }
 
 /* Ajustar contenedor para evitar solapamiento */

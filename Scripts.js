@@ -14,9 +14,10 @@ const DEFAULT_POST_COOLDOWN = 10;
 
 document.addEventListener('widgetEvent', handleWidgetEvent);
 
-// Expresión regular mejorada para detectar todos los formatos de YouTube
-const YT_REGEX = /!videoshare\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11})|youtube\.com\/shorts\/([\w-]{11})).*?(?:[?&]t=(\d+))?/i;
+// Expresión regular mejorada para detectar YouTube, Twitch y Kick
+const VIDEO_REGEX = /!videoshare2\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11})|youtube\.com\/shorts\/([\w-]{11})|(?:twitch\.tv\/\w+\/clip\/|clips\.twitch\.tv\/)([\w-]+)|(?:kick\.com\/[^\/]+\/clips\/|clips\.kick\.com\/)(clip_[\w]+))(?:.*?[?&]t=(\d+))?/i;
 
+// const VIDEO_REGEX = /!videoshare2\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11})|youtube\.com\/shorts\/([\w-]{11})|(?:twitch\.tv\/\w+\/clip\/|clips\.twitch\.tv\/)([\w-]+)|(?:kick\.com\/\w+\/clip\/|clips\.kick\.com\/)([\w-]+)).*?(?:[?&]t=(\d+))?/i;
 let currentTimer = null;
 let countdownInterval = null;
 let isPlaying = false;
@@ -30,14 +31,19 @@ function handleWidgetEvent(event) {
     
     const message = event.detail.data.content;
     
-    if (message.toLowerCase().includes('!videoshare')) {
-      const videoInfo = extractYouTubeInfo(message);
+    if (message.toLowerCase().includes('!videoshare2')) {
+      const videoInfo = extractVideoInfo(message);
       
       if (videoInfo && !isPlaying) {
         const username = event.detail.data.sender.username;
-        playYouTubeVideo(videoInfo.videoId, videoInfo.startTime, username, videoInfo.isShort);
+        playVideo(videoInfo, username);
       }
     }
+  }
+  
+  // Resetear color después de eventos relevantes
+  if (eventName === 'streamOffline' || eventName === 'chatClearedEvent') {
+    document.getElementById('user-info').style.background = 'rgba(0, 0, 0, 0.7)';
   }
 }
 
@@ -55,38 +61,53 @@ function parseISODuration(duration) {
   return totalSeconds;
 }
 
-// Extrae ID de YouTube, tiempo de inicio y tipo de video
-function extractYouTubeInfo(message) {
-  const match = message.match(YT_REGEX);
+// Extrae información de video (YouTube, Twitch y Kick)
+function extractVideoInfo(message) {
+  const match = message.match(VIDEO_REGEX);
   
   if (!match) return null;
   
-  // Identificar el formato de URL
-  let videoId;
-  let isShort = false;
-  
-  // Detectar formato de Shorts
-  if (match[3]) {
-    videoId = match[3];
-    isShort = true;
-  } 
-  // Detectar formato tradicional
-  else {
-    videoId = match[1] || match[2];
+  // Detectar YouTube
+  if (match[1] || match[2] || match[3]) {
+    let videoId;
+    let isShort = false;
+    
+    if (match[3]) {
+      videoId = match[3];
+      isShort = true;
+    } else {
+      videoId = match[1] || match[2];
+    }
+    
+    const startTime = match[6] ? parseInt(match[6]) : 0;
+    
+    return {
+      videoType: 'youtube',
+      videoId,
+      startTime,
+      isShort
+    };
+  }
+  // Detectar Twitch
+  else if (match[4]) {
+    return {
+      videoType: 'twitch',
+      videoId: match[4]
+    };
+  }
+  // Detectar Kick
+  else if (match[5]) {
+    return {
+      videoType: 'kick',
+      videoId: match[5],
+    };
   }
   
-  // Extraer tiempo (si existe)
-  const startTime = match[4] ? parseInt(match[4]) : 0;
-  
-  return {
-    videoId,
-    startTime,
-    isShort
-  };
+  return null;
 }
 
-// Reproduce video de YouTube con tiempo personalizado
-async function playYouTubeVideo(videoId, startTime = 0, username = '', isShort = false) {
+// Reproduce video (YouTube, Twitch o Kick)
+async function playVideo(videoInfo, username = '') {
   const player = document.getElementById('yt-player');
   const placeholder = document.getElementById('placeholder');
   const countdown = document.getElementById('countdown');
@@ -94,42 +115,74 @@ async function playYouTubeVideo(videoId, startTime = 0, username = '', isShort =
   const usernameSpan = document.getElementById('username');
   
   stopCurrentVideo();
+
+  // Kick sin cookies (actualmente no es posible poner únicamente el video)
+  const container = document.getElementById('player-container');
+  if (videoInfo.videoType === 'kick') {
+    container.classList.add('kick');
+  } else {
+    container.classList.remove('kick');
+  }
+  
+  // Crea el logo
+  let logoImg = document.getElementById('platform-logo');
+  if (!logoImg) {
+    logoImg = document.createElement('img');
+    logoImg.id = 'platform-logo';
+    userInfo.prepend(logoImg);
+  }
+  logoImg.style.display = 'inline-block';
   
   // Obtener API key de variables de usuario
-  const apiKey = 'YOUTUBE API KEY';
+  const apiKey = 'YOUTUBE_API_KEY';
   // Obtener duración del video desde variables de usuario o usar valor por defecto
   let videoDuration = userVariables.video_duration?.value 
     ? parseInt(userVariables.video_duration.value) 
     : DEFAULT_VIDEO_DURATION;
   
-  // Si tenemos API key, obtener duración real del video
-  if (apiKey) {
+  // Cambiar color y logo según plataforma
+  if (videoInfo.videoType === 'twitch') {
+    userInfo.style.background = 'rgba(0, 0, 0, 0.7)';
+    logoImg.src = 'https://assets.twitch.tv/assets/favicon-32-e29e246c157142c94346.png';
+  } else if (videoInfo.videoType === 'youtube') {
+    userInfo.style.background = 'rgba(0, 0, 0, 0.7)';
+    logoImg.src = "https://www.youtube.com/s/desktop/77bb79f2/img/logos/favicon_32x32.png";
+  } else if (videoInfo.videoType === 'kick') {
+    userInfo.style.background = 'rgba(0, 0, 0, 0.7)';
+    logoImg.src = 'https://kick.com/favicon.ico';
+  }
+  
+  // Si tenemos API key y es YouTube, obtener duración real
+  if (apiKey && videoInfo.videoType === 'youtube') {
     try {
-      const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=${apiKey}`);
+      const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoInfo.videoId}&part=contentDetails&key=${apiKey}`);
       const data = await response.json();
       
       if (data.items && data.items.length > 0) {
         const isoDuration = data.items[0].contentDetails.duration;
         const realDuration = parseISODuration(isoDuration);
         
-        // Ajustar duración: usar el mínimo entre la duración real y la configurada
-        videoDuration = Math.min(videoDuration, realDuration - startTime);
-        
-        // Asegurar que la duración no sea negativa
+        // Ajustar duración
+        videoDuration = Math.min(videoDuration, realDuration - (videoInfo.startTime || 0));
         if (videoDuration < 1) videoDuration = 1;
       }
     } catch (error) {
       console.error('Error obteniendo duración del video:', error);
     }
   }
-  // Construir URL dependiendo del tipo de video
+  
+  // Construir URL según plataforma
   let videoUrl;
-  if (isShort) {
-    // Formato especial para Shorts
-    videoUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0`;
-  } else {
-    // Formato tradicional para videos normales
-    videoUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&start=${startTime}`;
+  if (videoInfo.videoType === 'youtube') {
+    if (videoInfo.isShort) {
+      videoUrl = `https://www.youtube.com/embed/${videoInfo.videoId}?autoplay=1&mute=0`;
+    } else {
+      videoUrl = `https://www.youtube.com/embed/${videoInfo.videoId}?autoplay=1&mute=0&start=${videoInfo.startTime}`;
+    }
+  } else if (videoInfo.videoType === 'twitch') {
+    videoUrl = `https://clips.twitch.tv/embed?clip=${videoInfo.videoId}&parent=widgets.kickbot.com&autoplay=true&muted=false`;
+  } else if (videoInfo.videoType === 'kick') {
+  videoUrl = `https://kick.com/embed/clips/${videoInfo.videoId}?autoplay=true&muted=false`;
   }
   
   player.src = videoUrl;
