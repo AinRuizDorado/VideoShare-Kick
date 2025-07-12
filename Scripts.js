@@ -15,7 +15,7 @@ const DEFAULT_POST_COOLDOWN = 10;
 document.addEventListener('widgetEvent', handleWidgetEvent);
 
 // Expresión regular mejorada para detectar YouTube, Twitch y Kick
-const VIDEO_REGEX = /!videoshare2\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11})|youtube\.com\/shorts\/([\w-]{11})|(?:twitch\.tv\/\w+\/clip\/|clips\.twitch\.tv\/)([\w-]+)|(?:kick\.com\/[^\/]+\/clips\/|clips\.kick\.com\/)(clip_[\w]+))(?:.*?[?&]t=(\d+))?/i;
+const VIDEO_REGEX = /!videoshare\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11})|youtube\.com\/shorts\/([\w-]{11})|(?:twitch\.tv\/\w+\/clip\/|clips\.twitch\.tv\/)([\w-]+)|(?:kick\.com\/[^\/]+\/clips\/|clips\.kick\.com\/)(clip_[\w]+))(?:.*?[?&]t=(\d+))?/i;
 
 // const VIDEO_REGEX = /!videoshare2\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11})|youtube\.com\/shorts\/([\w-]{11})|(?:twitch\.tv\/\w+\/clip\/|clips\.twitch\.tv\/)([\w-]+)|(?:kick\.com\/\w+\/clip\/|clips\.kick\.com\/)([\w-]+)).*?(?:[?&]t=(\d+))?/i;
 let currentTimer = null;
@@ -31,7 +31,7 @@ function handleWidgetEvent(event) {
     
     const message = event.detail.data.content;
     
-    if (message.toLowerCase().includes('!videoshare2')) {
+    if (message.toLowerCase().includes('!videoshare')) {
       const videoInfo = extractVideoInfo(message);
       
       if (videoInfo && !isPlaying) {
