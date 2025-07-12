@@ -2,11 +2,136 @@
 // CONFIGURACIÓN FÁCIL PARA USUARIOS NO TÉCNICOS
 // =============================================
 
+
+// para desactivar el videoshare reemplazar el false por true
+// si esta en true es porq ya esta desactivado, para volver a activar hay que poner false
+// Ejemplos:
+// const DESACTIVAR_VIDEOSHARE = true;  // videoshare desactivado
+// const DESACTIVAR_VIDEOSHARE = false; // videoshare activado
+const DESACTIVAR_VIDEOSHARE = true;
+
 // Duración de reproducción de videos (en segundos)
 const DEFAULT_VIDEO_DURATION = 15;
 
 // Tiempo de espera entre videos (en segundos)
 const DEFAULT_POST_COOLDOWN = 10;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// =============================================
+// FILTRO DE CONTENIDO +18 (NUEVA SECCIÓN)
+// =============================================
+const NSFW_FILTER = {
+  // Palabras clave en múltiples idiomas
+  forbiddenKeywords: [
+    'porn', 'xxx', 'nsfw', 'sex', 'nude', 'naked', 'fuck', 'suck', 'cock', 'dick', 'pussy', 
+    'vagina', 'penis', 'cum', 'orgasm', 'blowjob', 'handjob', 'tits', 'boobs', 'anal',
+    'hentai', 'ejaculation', 'bdsm', 'fetish', 'rape', 'gore', 'blood', 'violence',
+    'murder', 'death', 'suicide', 'decapitation', 'mutilation', 'snuff', 'torture',
+    'desnudo', 'desnuda', 'sexo', 'porno', 'follar', 'mamar', 'polla', 'pene', 'vagina',
+    'tetas', 'culos', 'nalgas', 'corrida', 'eyaculación', 'violación', 'gore', 'sangre',
+    'violencia', 'asesinato', 'muerte', 'suicidio', 'decapitación', 'mutilación'
+  ],
+  
+  // Expresiones regulares para patrones específicos
+  patterns: [
+    /(18\+|adult|explicit)/i,
+    /(nud(e|ity)|desnud(o|a|os|as))/i,
+    /(bare\s?skin|skin\s?exposure)/i,
+    /(sexual|sexo|sexy|erotic)/i,
+    /(breast|boob|tits?|tetas?|pechos?)/i,
+    /(nipple|pez[óo]n)/i,
+    /(genital|genitales)/i,
+    /(explicit|expl[ií]cito)/i,
+    /(gore|blood|sangre|violence|violencia)/i
+  ],
+  
+  // Verifica si el contenido es seguro
+  isSafe: function(title, description) {
+    const text = `${title} ${description}`.toLowerCase();
+    
+    // Verificar palabras clave prohibidas
+    if (this.forbiddenKeywords.some(keyword => 
+        text.includes(keyword) || 
+        new RegExp(`\\b${keyword}\\b`).test(text))) {
+      return false;
+    }
+    
+    // Verificar patrones complejos
+    if (this.patterns.some(regex => regex.test(text))) {
+      return false;
+    }
+    
+    // Verificar combinaciones sospechosas
+    if ((text.includes('breast') && text.includes('feeding')) ||
+        (text.includes('desnudo') && text.includes('artístico'))) {
+      return false;
+    }
+    
+    return true;
+  }
+};
 
 // =============================================
 // NO MODIFICAR EL CÓDIGO A PARTIR DE ESTE PUNTO
@@ -17,7 +142,6 @@ document.addEventListener('widgetEvent', handleWidgetEvent);
 // Expresión regular mejorada para detectar YouTube, Twitch y Kick
 const VIDEO_REGEX = /!videoshare\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11})|youtube\.com\/shorts\/([\w-]{11})|(?:twitch\.tv\/\w+\/clip\/|clips\.twitch\.tv\/)([\w-]+)|(?:kick\.com\/[^\/]+\/clips\/|clips\.kick\.com\/)(clip_[\w]+))(?:.*?[?&]t=(\d+))?/i;
 
-// const VIDEO_REGEX = /!videoshare2\s+(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})|youtube\.com\/watch\?.*\bv=([\w-]{11})|youtube\.com\/shorts\/([\w-]{11})|(?:twitch\.tv\/\w+\/clip\/|clips\.twitch\.tv\/)([\w-]+)|(?:kick\.com\/\w+\/clip\/|clips\.kick\.com\/)([\w-]+)).*?(?:[?&]t=(\d+))?/i;
 let currentTimer = null;
 let countdownInterval = null;
 let isPlaying = false;
@@ -106,6 +230,34 @@ function extractVideoInfo(message) {
   return null;
 }
 
+// =============================================
+// FUNCIÓN PARA MOSTRAR MENSAJE DE BLOQUEO (NUEVO)
+// =============================================
+function showBlockedMessage(username) {
+  const player = document.getElementById('yt-player');
+  const placeholder = document.getElementById('placeholder');
+  const userInfo = document.getElementById('user-info');
+  const usernameSpan = document.getElementById('username');
+  
+  // Configurar elementos
+  player.style.display = 'none';
+  placeholder.style.display = 'flex';
+  placeholder.style.opacity = '1';
+  placeholder.innerHTML = '<div class="blocked-message">🚫 Contenido bloqueado</div>';
+  placeholder.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+  
+  usernameSpan.textContent = username;
+  userInfo.style.display = 'flex';
+  userInfo.style.background = 'rgba(200, 0, 0, 0.7)';
+  
+  // Restaurar después de 5 segundos
+  setTimeout(() => {
+    placeholder.innerHTML = '';
+    placeholder.style.backgroundColor = '';
+    userInfo.style.display = 'none';
+  }, 5000);
+}
+
 // Reproduce video (YouTube, Twitch o Kick)
 async function playVideo(videoInfo, username = '') {
   const player = document.getElementById('yt-player');
@@ -134,7 +286,7 @@ async function playVideo(videoInfo, username = '') {
   logoImg.style.display = 'inline-block';
   
   // Obtener API key de variables de usuario
-  const apiKey = 'YOUTUBE_API_KEY';
+  const apiKey = 'AIzaSyAGPTCcrdj3TTLGfjhPkhsBjNaO72wEu0g';
   // Obtener duración del video desde variables de usuario o usar valor por defecto
   let videoDuration = userVariables.video_duration?.value 
     ? parseInt(userVariables.video_duration.value) 
@@ -152,14 +304,26 @@ async function playVideo(videoInfo, username = '') {
     logoImg.src = 'https://kick.com/favicon.ico';
   }
   
-  // Si tenemos API key y es YouTube, obtener duración real
+  // Si tenemos API key y es YouTube, obtener duración real y verificar contenido
   if (apiKey && videoInfo.videoType === 'youtube') {
     try {
-      const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoInfo.videoId}&part=contentDetails&key=${apiKey}`);
+      const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoInfo.videoId}&part=snippet,contentDetails&key=${apiKey}`);
       const data = await response.json();
       
       if (data.items && data.items.length > 0) {
-        const isoDuration = data.items[0].contentDetails.duration;
+        const videoDetails = data.items[0];
+        
+        // =============================================
+        // APLICAR FILTRO NSFW (NUEVA VERIFICACIÓN)
+        // =============================================
+        if (!NSFW_FILTER.isSafe(videoDetails.snippet.title, videoDetails.snippet.description)) {
+          console.log('Video bloqueado por contenido inapropiado');
+          showBlockedMessage(username);
+          return;
+        }
+        
+        // Procesar duración del video
+        const isoDuration = videoDetails.contentDetails.duration;
         const realDuration = parseISODuration(isoDuration);
         
         // Ajustar duración
@@ -167,7 +331,7 @@ async function playVideo(videoInfo, username = '') {
         if (videoDuration < 1) videoDuration = 1;
       }
     } catch (error) {
-      console.error('Error obteniendo duración del video:', error);
+      console.error('Error obteniendo detalles del video:', error);
     }
   }
   
